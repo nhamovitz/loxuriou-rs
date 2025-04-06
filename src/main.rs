@@ -1,25 +1,65 @@
+use std::process::{ExitCode, ExitStatus};
+
 use chunk::{Chunk, OpCode};
+use vm::InterpretResult;
 
 mod chunk;
+mod compiler;
+mod scanner;
+mod test;
 mod vm;
 
-fn main() {
-    let _args = std::env::args().collect::<Vec<_>>();
+fn repl() {
+    let mut line = String::with_capacity(1024);
+    loop {
+        line.clear();
+        print!("> ");
+        match std::io::stdin().read_line(&mut line) {
+            Ok(len) => {
+                if len == 0 {
+                    println!();
+                    break;
+                } else {
+                    interpret(&line);
+                }
+            }
+            Err(e) => eprintln!("Error reading line from stdin: {:?}", e),
+        }
+    }
+}
 
-    let mut chunk = Chunk::default();
+fn interpret(source: &str) -> InterpretResult {
+    compiler::compile(source);
+    InterpretResult::Ok
+}
 
-    chunk.write(OpCode::Constant(chunk::Value(2.)), 123);
+fn run_file(file: &str) -> ExitCode {
+    let source = std::fs::read_to_string(file);
+    if let Ok(source) = source {
+        let res = interpret(&source);
+        match res {
+            InterpretResult::Ok => ExitCode::SUCCESS,
+            InterpretResult::CompileError => ExitCode::from(65),
+            InterpretResult::RuntimeError => ExitCode::from(70),
+        }
+    } else {
+        eprintln!("error reading file to memory {:?}", &file);
+        ExitCode::FAILURE
+    }
+}
 
-    chunk.write(OpCode::Constant(chunk::Value(3.)), 123);
+fn main() -> ExitCode {
+    let args = std::env::args().collect::<Vec<_>>();
 
-    chunk.write(OpCode::Add, 123);
-    chunk.write(OpCode::Constant(chunk::Value(11.)), 123);
-    chunk.write(OpCode::Divide, 123);
+    interpret("hello class 1 3\n1.2 *\n// comment\ntrue");
 
-    chunk.write(OpCode::Negate, 123);
-    chunk.write(OpCode::Return, 123);
-    chunk.dissasemble("test chunk");
-
-    println!("starting vm");
-    vm::VM::interpret(chunk);
+    if args.len() == 1 {
+        repl();
+        ExitCode::SUCCESS
+    } else if args.len() == 2 {
+        run_file(&args[1])
+    } else {
+        eprintln!("usage: loxuriou-rs [path]");
+        ExitCode::from(64)
+    }
 }
