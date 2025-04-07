@@ -1,4 +1,7 @@
-use std::process::{ExitCode, ExitStatus};
+use std::{
+    io::{BufRead, Write},
+    process::{ExitCode, ExitStatus},
+};
 
 use chunk::{Chunk, OpCode};
 use vm::InterpretResult;
@@ -11,13 +14,26 @@ mod vm;
 
 fn repl() {
     let mut line = String::with_capacity(1024);
+    let stdin = std::io::stdin();
+    let mut stdout = std::io::stdout();
+
     loop {
         line.clear();
         print!("> ");
-        match std::io::stdin().read_line(&mut line) {
+
+        if let Err(e) = stdout.flush() {
+            eprintln!(
+                "error flushing stdout while preparing for next prompt: {:?}",
+                e
+            );
+            break;
+        }
+        let input_size = stdin.lock().read_line(&mut line);
+
+        match input_size {
             Ok(len) => {
-                if len == 0 {
-                    println!();
+                // newline might be \n or \r\n
+                if len <= 2 {
                     break;
                 } else {
                     interpret(&line);
@@ -51,7 +67,7 @@ fn run_file(file: &str) -> ExitCode {
 fn main() -> ExitCode {
     let args = std::env::args().collect::<Vec<_>>();
 
-    interpret("hello class 1 3\n1.2 *\n// comment\ntrue");
+    interpret("hello class 1 3\n1.2 *\n// comment\ntrue = >= > 250123 var3 or");
 
     if args.len() == 1 {
         repl();

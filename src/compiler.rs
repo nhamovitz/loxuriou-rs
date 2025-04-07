@@ -8,7 +8,6 @@ pub(crate) fn compile(source: &str) {
     let mut line = None;
     loop {
         let token = scanner.scan_token();
-        println!("scanned token");
 
         if line != Some(token.line) {
             print!("{: >4?} ", token.line);

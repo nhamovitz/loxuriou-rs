@@ -18,11 +18,12 @@ impl<'a> Scanner<'a> {
     }
 
     pub(crate) fn scan_token(&mut self) -> Token {
-        println!("{:?} {:?}", self.start_char, self.next_char);
+        println!(
+            "entered scan_token. start: {:?} current: {:?}",
+            self.start_char, self.next_char
+        );
 
         self.skip_whitespace();
-
-        println!("skipped whitespace");
 
         self.start_char = self.next_char;
 
@@ -140,11 +141,10 @@ impl<'a> Scanner<'a> {
                 if c == '\n' {
                     self.line += 1;
                 }
-                _ = self.chars.next();
+                _ = self.advance();
             } else if c == '/' {
                 let slash = self.chars.next().expect("we peeked and found Some");
                 assert_eq!('/', slash.1);
-                self.ate_char = Some((slash.0, '/'));
 
                 if let Some(&(_, c)) = self.chars.peek() {
                     if c == '/' {
@@ -158,6 +158,7 @@ impl<'a> Scanner<'a> {
                             }
                         }
                     } else {
+                        self.ate_char = Some((slash.0, '/'));
                     }
                 } else {
                 }
@@ -282,10 +283,11 @@ impl<'a> Scanner<'a> {
         expected_finish: &str,
         token_type: TokenType<'b>,
     ) -> TokenType<'b> {
-        if rest
-            .iter()
-            .zip(expected_finish.chars())
-            .all(|(&c1, c2)| c1 == c2)
+        if rest.len() == expected_finish.len()
+            && rest
+                .iter()
+                .zip(expected_finish.chars())
+                .all(|(&c1, c2)| c1 == c2)
         {
             token_type
         } else {
